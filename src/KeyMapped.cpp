@@ -4,13 +4,14 @@
 #include <cstddef>
 #include <cstdlib>
 #include <stdlib.h>
+#include <Timer.hpp>
 
 using namespace db;
 
-KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite)
+KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug)
 {
     Log::Init();
-
+    showDebugInfo = debug;
     if (overwrite && fs::exists(dbPath))
     {
         assert(fs::remove(dbPath));
@@ -92,21 +93,9 @@ void KeyMapped::Write(const KeyValue& pair)
 
 KeyValue KeyMapped::Read(std::string_view key)
 {
-    KeyValue pair{};
-    size_t offset = 0;
-    for (int i = 0; i < header.size; i++)
-    {
-        dbFileInput->seekg(offset, std::ios::beg);
-        dbFileInput->read(reinterpret_cast<char*>(&pair), sizeof(pair));
-        offset += sizeof(pair);
+    auto result = ReadUnIndexed(key);
 
-        if (std::string(key) == pair.key)
-        {
-            return pair;
-        }
-    }
-
-    return KeyValue{};
+    return result;
 }
 
 std::string KeyMapped::Get(std::string_view key)
@@ -119,4 +108,38 @@ std::string KeyMapped::Get(std::string_view key)
         KM_WARN("Can't find any value for key \"{}\"", key.data());
     }
     return result.value;
+}
+
+KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
+{
+    Timer timer;
+    KeyValue pair{};
+    bool success = false;
+    size_t offset = 0;
+    for (int i = 0; i < header.size; i++)
+    {
+        dbFileInput->seekg(offset, std::ios::beg);
+        dbFileInput->read(reinterpret_cast<char*>(&pair), sizeof(pair));
+        offset += sizeof(pair);
+
+        if (std::string(key) == pair.key)
+        {
+            success = true;
+            break;
+        }
+    }
+
+    if (showDebugInfo)
+    {
+        KM_TRACE("{} took {}ms", __FUNCTION__, timer.ElapsedMillis());
+    }
+
+    if (success)
+    {
+        return pair;
+    }
+    else
+    {
+        return {};
+    }
 }

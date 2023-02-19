@@ -33,7 +33,7 @@ namespace db
     class KeyMapped
     {
     public:
-        KeyMapped(const fs::path& dbPath, bool overwrite = false);
+        KeyMapped(const fs::path& dbPath, bool overwrite = false, bool debug = false);
         ~KeyMapped();
 
         void Add(std::string_view key, std::string_view value);
@@ -46,9 +46,11 @@ namespace db
 
         void Write(const KeyValue& pair);
         KeyValue Read(std::string_view key);
+        KeyValue ReadUnIndexed(std::string_view key);
 
         std::shared_ptr<std::ostream> dbFileOutput;
         std::shared_ptr<std::istream> dbFileInput;
         Header header;
+        bool showDebugInfo = false;
     };
 }

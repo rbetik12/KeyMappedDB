@@ -1,9 +1,6 @@
 #include "KeyMapped.hpp"
 #include <Logger.hpp>
 #include <cassert>
-#include <cstddef>
-#include <cstdlib>
-#include <stdlib.h>
 #include <Timer.hpp>
 
 using namespace db;
@@ -57,12 +54,19 @@ void KeyMapped::Add(std::string_view key, std::string_view value)
         return;
     }
 
+    if (!Get(key).empty())
+    {
+        KM_WARN("Key \"{}\" already exists", key.data());
+        return;
+    }
+
     KeyValue pair{};
     pair.descriptor.keySize = key.size();
     pair.descriptor.valueSize = value.size();
     memcpy(&pair.key, key.data(), key.size());
     memcpy(&pair.value, value.data(), value.size());
-    Write(pair);
+    auto offset = Write(pair);
+    hashIndex[std::string(key)] = offset;
 }
 
 void KeyMapped::WriteHeader()
@@ -81,7 +85,7 @@ void KeyMapped::ReadHeader()
     dbFileInput->seekg(pos);
 }
 
-void KeyMapped::Write(const KeyValue& pair)
+size_t KeyMapped::Write(const KeyValue& pair)
 {
     assert(pair.descriptor.valueSize != 0 && pair.descriptor.keySize != 0);
     assert(pair.descriptor.keySize < MAX_KEY_SIZE && pair.descriptor.valueSize < MAX_VALUE_SIZE);
@@ -89,24 +93,27 @@ void KeyMapped::Write(const KeyValue& pair)
 
     dbFileOutput->write(reinterpret_cast<const char*>(&pair), sizeof(pair));
     dbFileOutput->flush();
+    return static_cast<size_t>(dbFileOutput->tellp()) - sizeof(pair);
 }
 
 KeyValue KeyMapped::Read(std::string_view key)
 {
-    auto result = ReadUnIndexed(key);
+    KeyValue kv;
 
-    return result;
+    kv = ReadHashIndex(key);
+    if (kv.Valid())
+    {
+        return kv;
+    }
+
+    kv = ReadUnIndexed(key);
+    return kv;
 }
 
 std::string KeyMapped::Get(std::string_view key)
 {
     auto result = Read(key);
     std::string res = result.value;
-
-    if (res.empty())
-    {
-        KM_WARN("Can't find any value for key \"{}\"", key.data());
-    }
     return result.value;
 }
 
@@ -142,4 +149,19 @@ KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
     {
         return {};
     }
+}
+
+KeyValue KeyMapped::ReadHashIndex(std::string_view key)
+{
+    KeyValue kv{};
+
+    if (hashIndex.find(std::string(key)) == hashIndex.end())
+    {
+        return kv;
+    }
+
+    const auto offset = hashIndex.at(std::string(key));
+    dbFileInput->seekg(offset, std::ios::beg);
+    dbFileInput->read(reinterpret_cast<char*>(&kv), sizeof(kv));
+    return kv;
 }

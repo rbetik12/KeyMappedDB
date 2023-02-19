@@ -34,3 +34,18 @@ TEST_CASE("Read and write")
     CHECK(db.Get("Key2") == "Value2");
     CHECK(db.Get("Key3") == "");
 }
+
+TEST_CASE("Read and write same keys")
+{
+    CreateDb();
+
+    db::KeyMapped db(TEST_DB_PATH);
+    db.Add("Key", "OtherValue");
+    db.Add("Key1", "OtherValue1");
+
+    CHECK(db.Get("Key") == "Value");
+    CHECK(db.Get("Key1") == "Value1");
+    CHECK(db.Get("Key2") == "Value2");
+    CHECK(db.Get("Key3") == "");
+    CHECK(db.Size() == 3);
+}

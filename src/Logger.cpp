@@ -15,7 +15,6 @@ void Log::Init()
         logger = spdlog::stdout_color_mt("KeyMapped");
         logger->set_level(spdlog::level::trace);
         isInitialized = true;
-        KM_INFO("Successfully initialized logging system!");
     }
 }
 

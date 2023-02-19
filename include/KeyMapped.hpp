@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
@@ -28,6 +29,8 @@ namespace db
         KeyValueDescriptor descriptor;
         char key[MAX_KEY_SIZE];
         char value[MAX_VALUE_SIZE];
+
+        bool Valid() const { return descriptor.keySize > 0 && descriptor.valueSize > 0; }
     };
 
     class KeyMapped
@@ -44,13 +47,16 @@ namespace db
         void WriteHeader();
         void ReadHeader();
 
-        void Write(const KeyValue& pair);
+        size_t Write(const KeyValue& pair);
         KeyValue Read(std::string_view key);
         KeyValue ReadUnIndexed(std::string_view key);
+        KeyValue ReadHashIndex(std::string_view key);
 
         std::shared_ptr<std::ostream> dbFileOutput;
         std::shared_ptr<std::istream> dbFileInput;
         Header header;
         bool showDebugInfo = false;
+
+        std::unordered_map<std::string, size_t> hashIndex;
     };
 }

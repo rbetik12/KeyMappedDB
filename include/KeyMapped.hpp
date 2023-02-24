@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <unordered_map>
+#include <map>
 
 namespace fs = std::filesystem;
 
@@ -11,6 +12,7 @@ namespace db
     constexpr const size_t MAGIC_NUMBER = 0x1488;
     constexpr const size_t MAX_KEY_SIZE = 1024;
     constexpr const size_t MAX_VALUE_SIZE = 1024;
+    constexpr const size_t MAX_RB_TREE_SIZE = 512;
 
     struct Header
     {
@@ -52,11 +54,15 @@ namespace db
         KeyValue ReadUnIndexed(std::string_view key);
         KeyValue ReadHashIndex(std::string_view key);
 
+        void DumpRbTree();
+
         std::shared_ptr<std::ostream> dbFileOutput;
         std::shared_ptr<std::istream> dbFileInput;
         Header header;
         bool showDebugInfo = false;
 
         std::unordered_map<std::string, size_t> hashIndex;
+        std::map<std::string, size_t> rbTreeIndex;
+        std::map<std::string, size_t> sparseTable;
     };
 }

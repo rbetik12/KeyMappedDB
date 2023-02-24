@@ -67,6 +67,8 @@ void KeyMapped::Add(std::string_view key, std::string_view value)
     memcpy(&pair.value, value.data(), value.size());
     auto offset = Write(pair);
     hashIndex[std::string(key)] = offset;
+    rbTreeIndex[std::string(key)] = offset;
+    DumpRbTree();
 }
 
 void KeyMapped::WriteHeader()
@@ -164,4 +166,9 @@ KeyValue KeyMapped::ReadHashIndex(std::string_view key)
     dbFileInput->seekg(offset, std::ios::beg);
     dbFileInput->read(reinterpret_cast<char*>(&kv), sizeof(kv));
     return kv;
+}
+
+void KeyMapped::DumpRbTree()
+{
+
 }

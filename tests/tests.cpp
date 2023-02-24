@@ -2,8 +2,10 @@
 #include <doctest.h>
 
 #include <KeyMapped.hpp>
+#include <Utils.hpp>
 
 constexpr const char* TEST_DB_PATH = "./test-db.bin";
+constexpr const char* TEST_BIN_DIR = "bin";
 
 namespace
 {
@@ -48,4 +50,43 @@ TEST_CASE("Read and write same keys")
     CHECK(db.Get("Key2") == "Value2");
     CHECK(db.Get("Key3") == "");
     CHECK(db.Size() == 3);
+}
+
+TEST_CASE("Check file read and write")
+{
+    const size_t dataSize = 16;
+    const char data[dataSize] = {
+            'H', 'L', 'O', 'T', 'E', 'S', 'T'
+    };
+    const std::string filePath = std::string(TEST_BIN_DIR) + "/test-read-write.bin";
+
+    {
+        fs::create_directory(std::string(TEST_BIN_DIR));
+        std::ofstream file(filePath);
+    }
+
+    std::fstream stream(filePath, std::ios::in | std::ios::out | std::ios::binary);
+    CHECK(db::utils::Write(stream, data, dataSize) == dataSize);
+
+    {
+        char readData[dataSize] = {};
+        CHECK(db::utils::Read(stream, readData, dataSize) == dataSize);
+        CHECK(memcmp(readData, data, dataSize) == 0);
+    }
+    {
+        char readData[dataSize] = {};
+        const char checkData[dataSize] = {
+                'O', 'T', 'E', 'S', 'T'
+        };
+        CHECK(db::utils::Read(stream, readData, dataSize, 2) == dataSize - 2);
+        CHECK(memcmp(readData, checkData, dataSize) == 0);
+    }
+    {
+        char readData[dataSize] = {};
+        const char checkData[dataSize] = {
+                'O', 'T', 'E', 'S', 'T'
+        };
+        CHECK(db::utils::Read(stream, readData, dataSize, -14) == 14);
+        CHECK(memcmp(readData, checkData, dataSize) == 0);
+    }
 }

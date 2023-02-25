@@ -2,10 +2,13 @@
 #include <Logger.hpp>
 #include <cassert>
 #include <Timer.hpp>
+#include <Utils.hpp>
+#include "index/HashIndex.hpp"
+#include "index/SlowIndex.hpp"
 
 using namespace db;
 
-KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug)
+KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::Type indexType) : dbPath(std::move(dbPath))
 {
     Log::Init();
     showDebugInfo = debug;
@@ -20,19 +23,46 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug)
         validate = true;
     }
 
-    dbFileOutput = std::make_shared<std::ofstream>(std::ofstream(dbPath, std::ios::app | std::ios::binary));
-    dbFileInput = std::make_shared<std::ifstream>(std::ifstream(dbPath, std::ios::binary));
-    assert(dbFileOutput->good());
-    assert(dbFileInput->good());
+    const std::string headerFilePath = dbPath.stem().generic_string();
+    const std::string dbFilePathWExt = headerFilePath + ".meta";
+    headerPath = dbFilePathWExt;
+
+    dbFile = std::fstream(dbPath, std::ios::in | std::ios::app | std::ios::binary);
+    assert(dbFile.is_open());
+    assert(dbFile.good());
+
     if (validate)
     {
         ReadHeader();
         assert(header.magicNumber == MAGIC_NUMBER);
-    }
-    else
+    } else
     {
         header.magicNumber = MAGIC_NUMBER;
     }
+
+    switch (indexType)
+    {
+        case index::Type::Hash:
+            indexInstance = std::make_shared<index::HashIndex>();
+            break;
+        case index::Type::Slow:
+            indexInstance = std::make_shared<index::SlowIndex>();
+            break;
+    }
+
+    indexInstance->SetWriter([&](const KeyValue& pair)
+                             {
+                                 assert(pair.Valid());
+                                 return Write(pair);
+                             });
+    indexInstance->SetReader([&](int64_t offset)
+                             {
+                                return Read(offset);
+                             });
+    indexInstance->SetSlowReader([&](std::string_view key)
+                                 {
+                                     return ReadUnIndexed(key);
+                                 });
 }
 
 KeyMapped::~KeyMapped()
@@ -40,24 +70,23 @@ KeyMapped::~KeyMapped()
     WriteHeader();
 }
 
-void KeyMapped::Add(std::string_view key, std::string_view value)
+bool KeyMapped::Add(std::string_view key, std::string_view value)
 {
     if (key.empty() || value.empty())
     {
         KM_WARN("Attempt to write empty key \"{}\" or value \"{}\"", key.data(), value.data());
-        return;
+        return false;
     }
 
     if (key.size() >= MAX_KEY_SIZE && value.size() >= MAX_VALUE_SIZE)
     {
         KM_WARN("Attempt to write too large key \"{}\" or value \"{}\"", key.data(), value.data());
-        return;
+        return false;
     }
 
     if (!Get(key).empty())
     {
-        KM_WARN("Key \"{}\" already exists", key.data());
-        return;
+        return false;
     }
 
     KeyValue pair{};
@@ -65,26 +94,19 @@ void KeyMapped::Add(std::string_view key, std::string_view value)
     pair.descriptor.valueSize = value.size();
     memcpy(&pair.key, key.data(), key.size());
     memcpy(&pair.value, value.data(), value.size());
-    auto offset = Write(pair);
-    hashIndex[std::string(key)] = offset;
-    rbTreeIndex[std::string(key)] = offset;
-    DumpRbTree();
+    return indexInstance->Add(pair);
 }
 
 void KeyMapped::WriteHeader()
 {
-    dbFileOutput->write(reinterpret_cast<const char*>(&header), sizeof(header));
-    dbFileOutput->flush();
+    std::fstream headerFile(headerPath, std::ios::out | std::ios::binary);
+    utils::Write(headerFile, reinterpret_cast<const char*>(&header), sizeof(header));
 }
 
 void KeyMapped::ReadHeader()
 {
-    const int headerSize = sizeof(header);
-    std::streampos pos = dbFileInput->tellg();
-    dbFileInput->seekg(std::ios::end);
-    dbFileInput->seekg(-headerSize, std::ios::end);
-    dbFileInput->read(reinterpret_cast<char*>(&header), sizeof(header));
-    dbFileInput->seekg(pos);
+    std::fstream headerFile(headerPath, std::ios::in | std::ios::binary);
+    utils::Read(headerFile, reinterpret_cast<char*>(&header), sizeof(header));
 }
 
 size_t KeyMapped::Write(const KeyValue& pair)
@@ -93,30 +115,20 @@ size_t KeyMapped::Write(const KeyValue& pair)
     assert(pair.descriptor.keySize < MAX_KEY_SIZE && pair.descriptor.valueSize < MAX_VALUE_SIZE);
     header.size += 1;
 
-    dbFileOutput->write(reinterpret_cast<const char*>(&pair), sizeof(pair));
-    dbFileOutput->flush();
-    return static_cast<size_t>(dbFileOutput->tellp()) - sizeof(pair);
+    return utils::Write(dbFile, reinterpret_cast<const char*>(&pair), sizeof(pair)) - sizeof(pair);
 }
 
-KeyValue KeyMapped::Read(std::string_view key)
+KeyValue KeyMapped::Read(int64_t offset)
 {
-    KeyValue kv;
-
-    kv = ReadHashIndex(key);
-    if (kv.Valid())
-    {
-        return kv;
-    }
-
-    kv = ReadUnIndexed(key);
+    KeyValue kv{};
+    utils::Read(dbFile, reinterpret_cast<char*>(&kv), sizeof(kv), offset);
     return kv;
 }
 
 std::string KeyMapped::Get(std::string_view key)
 {
-    auto result = Read(key);
-    std::string res = result.value;
-    return result.value;
+    const auto res = indexInstance->Get(key);
+    return res.value;
 }
 
 KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
@@ -127,8 +139,7 @@ KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
     size_t offset = 0;
     for (int i = 0; i < header.size; i++)
     {
-        dbFileInput->seekg(offset, std::ios::beg);
-        dbFileInput->read(reinterpret_cast<char*>(&pair), sizeof(pair));
+        utils::Read(dbFile, reinterpret_cast<char*>(&pair), sizeof(pair), offset);
         offset += sizeof(pair);
 
         if (std::string(key) == pair.key)
@@ -146,29 +157,8 @@ KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
     if (success)
     {
         return pair;
-    }
-    else
+    } else
     {
         return {};
     }
-}
-
-KeyValue KeyMapped::ReadHashIndex(std::string_view key)
-{
-    KeyValue kv{};
-
-    if (hashIndex.find(std::string(key)) == hashIndex.end())
-    {
-        return kv;
-    }
-
-    const auto offset = hashIndex.at(std::string(key));
-    dbFileInput->seekg(offset, std::ios::beg);
-    dbFileInput->read(reinterpret_cast<char*>(&kv), sizeof(kv));
-    return kv;
-}
-
-void KeyMapped::DumpRbTree()
-{
-
 }

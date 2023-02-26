@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <string>
+#include <Config.hpp>
+#include "Logger.hpp"
 
 namespace db
 {
@@ -10,16 +12,30 @@ namespace db
 
 namespace db::index
 {
+    struct OffsetIndexHeader
+    {
+        size_t magicNumber;
+        size_t keysAmount;
+    };
+
+    struct OffsetIndex
+    {
+        char key[MAX_KEY_SIZE];
+        size_t offset;
+    };
+
     enum class Type
     {
         Slow,
         Hash,
+        SSTable,
         LSM
     };
 
     class IIndex
     {
     public:
+        IIndex(const std::string& dbName) { KM_INFO("Creating index for {} db", dbName); }
         virtual bool Add(const KeyValue& pair) = 0;
         virtual KeyValue Get(std::string_view key) = 0;
 
@@ -31,13 +47,13 @@ namespace db::index
         void SetReader(std::function<KeyValue(int64_t)>&& aReader)
         { reader = std::move(aReader); }
 
-        void SetSlowReader(std::function<KeyValue(std::string_view)>&& aReader)
+        void SetSlowReader(std::function<std::pair<int64_t, KeyValue>(std::string_view)>&& aReader)
         { slowReader = aReader; }
 
     protected:
         std::function<size_t(const KeyValue&)> writer;
         std::function<KeyValue(int64_t)> reader;
-        std::function<KeyValue(std::string_view)> slowReader;
+        std::function<std::pair<int64_t, KeyValue>(std::string_view)> slowReader;
         std::string name;
     };
 }

@@ -7,6 +7,8 @@ namespace db::index
     class HashIndex : public IIndex
     {
     public:
+        HashIndex(const std::string& dbName);
+
         virtual bool Add(const KeyValue& pair) override;
         virtual KeyValue Get(std::string_view key) override;
 

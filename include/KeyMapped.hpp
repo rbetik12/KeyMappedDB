@@ -5,17 +5,12 @@
 #include <unordered_map>
 #include <map>
 #include <IIndex.hpp>
+#include <Config.hpp>
 
 namespace fs = std::filesystem;
 
 namespace db
 {
-    constexpr const size_t BLOCK_SIZE = 512;
-    constexpr const size_t MAGIC_NUMBER = 0x1488;
-    constexpr const size_t MAX_KEY_SIZE = BLOCK_SIZE;
-    constexpr const size_t MAX_VALUE_SIZE = BLOCK_SIZE;
-    constexpr const size_t MAX_RB_TREE_SIZE = BLOCK_SIZE;
-
     struct Header
     {
         size_t magicNumber = 0;
@@ -53,7 +48,7 @@ namespace db
 
         size_t Write(const KeyValue& pair);
         KeyValue Read(int64_t offset);
-        KeyValue ReadUnIndexed(std::string_view key);
+        std::pair<int64_t, KeyValue> ReadUnIndexed(std::string_view key);
         std::fstream dbFile;
         Header header;
         bool showDebugInfo = false;

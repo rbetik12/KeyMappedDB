@@ -7,6 +7,7 @@ namespace db::index
     class SlowIndex : public IIndex
     {
     public:
+        SlowIndex(const std::string& dbName);
         virtual bool Add(const KeyValue& pair) override;
         virtual KeyValue Get(std::string_view key) override;
 

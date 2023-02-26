@@ -3,6 +3,11 @@
 
 namespace db::index
 {
+    SlowIndex::SlowIndex(const std::string& dbName) : IIndex(dbName)
+    {
+        name = dbName + "-slow.index";
+    }
+
     bool SlowIndex::Add(const KeyValue& pair)
     {
         writer(pair);
@@ -12,7 +17,7 @@ namespace db::index
     KeyValue SlowIndex::Get(std::string_view key)
     {
         auto result = slowReader(key);
-        return result;
+        return result.second;
     }
 
     SlowIndex::~SlowIndex()

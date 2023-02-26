@@ -12,7 +12,10 @@ include_directories(KeyMapped PUBLIC include)
 set(SRC
         src/KeyMapped.cpp
         src/Logger.cpp
-        src/Utils.cpp src/index/HashIndex.cpp src/index/SlowIndex.cpp src/index/SlowIndex.hpp)
+        src/Utils.cpp
+        src/index/HashIndex.cpp
+        src/index/SlowIndex.cpp
+        src/index/SsTableIndex.cpp include/Config.hpp)
 
 add_executable(KeyMapped ${SRC} src/main.cpp)
 add_executable(KeyMappedTests ${SRC} tests/tests.cpp)

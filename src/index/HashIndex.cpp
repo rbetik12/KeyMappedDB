@@ -3,6 +3,11 @@
 
 namespace db::index
 {
+    HashIndex::HashIndex(const std::string& dbName) : IIndex(dbName)
+    {
+        name = dbName + "-hash.index";
+    }
+
     bool HashIndex::Add(const KeyValue& pair)
     {
         const std::string key = pair.key;
@@ -19,12 +24,17 @@ namespace db::index
         KeyValue kv{};
         const std::string keyStr(key);
         const auto it = offsetMap.find(keyStr);
-        if (it == offsetMap.end())
+        if (it != offsetMap.end())
         {
-            return kv;
+            reader(it->second);
         }
 
-        return reader(it->second);
+        auto [offset, result] = slowReader(key);
+        if (result.Valid())
+        {
+            offsetMap[keyStr] = offset;
+        }
+        return result;
     }
 
     HashIndex::~HashIndex()

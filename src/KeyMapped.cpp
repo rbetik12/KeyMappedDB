@@ -5,6 +5,7 @@
 #include <Utils.hpp>
 #include "index/HashIndex.hpp"
 #include "index/SlowIndex.hpp"
+#include "index/SsTableIndex.hpp"
 
 using namespace db;
 
@@ -43,11 +44,16 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
     switch (indexType)
     {
         case index::Type::Hash:
-            indexInstance = std::make_shared<index::HashIndex>();
+            indexInstance = std::make_shared<index::HashIndex>(headerFilePath);
             break;
         case index::Type::Slow:
-            indexInstance = std::make_shared<index::SlowIndex>();
+            indexInstance = std::make_shared<index::SlowIndex>(headerFilePath);
             break;
+        case index::Type::SSTable:
+            indexInstance = std::make_shared<index::SSTableIndex>(headerFilePath);
+            break;
+        default:
+            assert(false);
     }
 
     indexInstance->SetWriter([&](const KeyValue& pair)
@@ -131,7 +137,7 @@ std::string KeyMapped::Get(std::string_view key)
     return res.value;
 }
 
-KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
+std::pair<int64_t, KeyValue> KeyMapped::ReadUnIndexed(std::string_view key)
 {
     Timer timer;
     KeyValue pair{};
@@ -156,7 +162,7 @@ KeyValue KeyMapped::ReadUnIndexed(std::string_view key)
 
     if (success)
     {
-        return pair;
+        return {offset, pair};
     } else
     {
         return {};

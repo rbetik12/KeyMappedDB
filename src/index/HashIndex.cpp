@@ -39,4 +39,10 @@ namespace db::index
 
     HashIndex::~HashIndex()
     {}
+
+    void HashIndex::Clear()
+    {
+        IIndex::Clear();
+        offsetMap.clear();
+    }
 }

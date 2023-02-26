@@ -12,35 +12,9 @@ using namespace db;
 KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::Type indexType) : dbPath(std::move(dbPath))
 {
     Log::Init();
-    showDebugInfo = debug;
-    if (overwrite && fs::exists(dbPath))
-    {
-        assert(fs::remove(dbPath));
-    }
-
-    bool validate = false;
-    if (fs::exists(dbPath))
-    {
-        validate = true;
-    }
-
     const std::string headerFilePath = dbPath.stem().generic_string();
     const std::string dbFilePathWExt = headerFilePath + ".meta";
     headerPath = dbFilePathWExt;
-
-    dbFile = std::fstream(dbPath, std::ios::in | std::ios::app | std::ios::binary);
-    assert(dbFile.is_open());
-    assert(dbFile.good());
-
-    if (validate)
-    {
-        ReadHeader();
-        assert(header.magicNumber == MAGIC_NUMBER);
-    } else
-    {
-        header.magicNumber = MAGIC_NUMBER;
-    }
-
     switch (indexType)
     {
         case index::Type::Hash:
@@ -63,12 +37,40 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
                              });
     indexInstance->SetReader([&](int64_t offset)
                              {
-                                return Read(offset);
+                                 return Read(offset);
                              });
     indexInstance->SetSlowReader([&](std::string_view key)
                                  {
                                      return ReadUnIndexed(key);
                                  });
+    showDebugInfo = debug;
+    if (overwrite && fs::exists(dbPath))
+    {
+        assert(fs::remove(dbPath));
+        assert(fs::remove(headerPath));
+        indexInstance->Clear();
+    }
+
+    bool validate = false;
+    if (fs::exists(dbPath))
+    {
+        validate = true;
+    }
+
+
+
+    dbFile = std::fstream(dbPath, std::ios::in | std::ios::app | std::ios::binary);
+    assert(dbFile.is_open());
+    assert(dbFile.good());
+
+    if (validate)
+    {
+        ReadHeader();
+        assert(header.magicNumber == MAGIC_NUMBER);
+    } else
+    {
+        header.magicNumber = MAGIC_NUMBER;
+    }
 }
 
 KeyMapped::~KeyMapped()

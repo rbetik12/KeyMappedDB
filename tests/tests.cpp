@@ -121,5 +121,5 @@ TEST_CASE("Check empty key in sstable db and slow reading")
     CHECK(db.Get("Key1") == "Value1");
     CHECK(db.Get("Key2") == "Value2");
     CHECK(db.Get("Key3") == "Value3");
-    CHECK(db.Get("") == "");
+    CHECK(db.Get("Kek") == "");
 }

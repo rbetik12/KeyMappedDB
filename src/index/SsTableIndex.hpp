@@ -12,6 +12,8 @@ namespace db::index
         virtual bool Add(const KeyValue& pair) override;
         virtual KeyValue Get(std::string_view key) override;
 
+        virtual void Clear() override;
+
         virtual ~SSTableIndex() override;
 
     private:

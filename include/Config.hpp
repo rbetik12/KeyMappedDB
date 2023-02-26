@@ -1,5 +1,9 @@
 #pragma once
 
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
 namespace db
 {
     constexpr const size_t BLOCK_SIZE = 512;

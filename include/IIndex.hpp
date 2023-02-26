@@ -39,6 +39,14 @@ namespace db::index
         virtual bool Add(const KeyValue& pair) = 0;
         virtual KeyValue Get(std::string_view key) = 0;
 
+        virtual void Clear()
+        {
+            if (fs::exists(name))
+            {
+                assert(fs::remove(name));
+            }
+        }
+
         virtual ~IIndex() {}
 
         void SetWriter(std::function<size_t(const KeyValue&)>&& aWriter)

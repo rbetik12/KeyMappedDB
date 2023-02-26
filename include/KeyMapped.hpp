@@ -7,8 +7,6 @@
 #include <IIndex.hpp>
 #include <Config.hpp>
 
-namespace fs = std::filesystem;
-
 namespace db
 {
     struct Header

@@ -47,7 +47,27 @@ namespace db::index
 
     void SSTableIndex::LoadTable()
     {
+        if (!fs::exists(name))
+        {
+            return;
+        }
 
+        OffsetIndexHeader header{};
+        std::vector<OffsetIndex> indexes;
+
+        std::fstream input(name, std::ios::in | std::ios::binary);
+        assert(input.good());
+        assert(input.is_open());
+
+        utils::Read(input, reinterpret_cast<char*>(&header), sizeof(header));
+        assert(header.magicNumber == MAGIC_NUMBER);
+        indexes.resize(header.keysAmount);
+        utils::Read(input, reinterpret_cast<char*>(indexes.data()), header.keysAmount * sizeof(OffsetIndex), sizeof(header));
+
+        for (const auto& index : indexes)
+        {
+            table[index.key] = index.offset;
+        }
     }
 
     void SSTableIndex::SaveTable()
@@ -71,6 +91,12 @@ namespace db::index
         assert(output.good());
         assert(output.is_open());
         utils::Write(output, reinterpret_cast<const char*>(&header), sizeof(header));
-        utils::Write(output, reinterpret_cast<const char*>(indexes.data()), indexes.size());
+        utils::Write(output, reinterpret_cast<const char*>(indexes.data()), indexes.size() * sizeof(OffsetIndex));
+    }
+
+    void SSTableIndex::Clear()
+    {
+        IIndex::Clear();
+        table.clear();
     }
 }

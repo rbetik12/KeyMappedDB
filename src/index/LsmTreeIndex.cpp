@@ -37,18 +37,19 @@ namespace db::index
     {
         IIndex::Clear();
         table.clear();
-        for (auto&& [key, path] : sparseTable)
-        {
-            if (fs::exists(path))
-            {
-                assert(fs::remove(path));
-            }
-        }
-        sparseTable.clear();
+        ClearSparseTable();
     }
 
     LSMTreeIndex::~LSMTreeIndex()
     {
+        SaveTable();
+
+        //Merge indexes
+        for (const auto& [key, path] : sparseTable)
+        {
+            LoadTable(path);
+        }
+        ClearSparseTable();
         SaveTable();
         SaveSparseTable();
     }
@@ -189,5 +190,17 @@ namespace db::index
         {
             sparseTable[{ element.firstKey, element.lastKey }] = element.indexPath;
         }
+    }
+
+    void LSMTreeIndex::ClearSparseTable()
+    {
+        for (auto&& [key, path] : sparseTable)
+        {
+            if (fs::exists(path))
+            {
+                assert(fs::remove(path));
+            }
+        }
+        sparseTable.clear();
     }
 }

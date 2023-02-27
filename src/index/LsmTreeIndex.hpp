@@ -38,6 +38,7 @@ namespace db::index
         void LoadTable(std::string_view tableName);
         void SaveSparseTable();
         void LoadSparseTable();
+        void ClearSparseTable();
 
         std::map<std::string, size_t> table;
         std::map<std::pair<std::string, std::string>, std::string> sparseTable;

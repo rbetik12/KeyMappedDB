@@ -142,3 +142,30 @@ TEST_CASE("Check lsm-tree base")
     CHECK(db.Get("Key3") == "Value3");
     CHECK(db.Get("Kek") == "");
 }
+
+#include "../src/index/LsmTreeIndex.hpp"
+
+TEST_CASE("Check lsm-tree base with low table size dump value")
+{
+    {
+        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+        auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
+        assert(index != nullptr);
+        index->SetMaxTableSize(2);
+        db.Add("Key", "Value");
+        db.Add("Key1", "Value1");
+        db.Add("Key2", "Value2");
+        db.Add("Key3", "Value3");
+    }
+
+    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::LSM);
+    auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
+    assert(index != nullptr);
+    index->SetMaxTableSize(2);
+
+    CHECK(db.Get("Key") == "Value");
+    CHECK(db.Get("Key1") == "Value1");
+    CHECK(db.Get("Key2") == "Value2");
+    CHECK(db.Get("Key3") == "Value3");
+    CHECK(db.Get("Kek") == "");
+}

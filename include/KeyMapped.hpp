@@ -39,6 +39,8 @@ namespace db
         bool Add(std::string_view key, std::string_view value);
         std::string Get(std::string_view key);
         size_t Size() const { return header.size; }
+        std::shared_ptr<index::IIndex> Index()
+        { return indexInstance; }
 
     private:
         void WriteHeader();

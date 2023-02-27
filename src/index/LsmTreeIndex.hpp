@@ -16,6 +16,9 @@ namespace db::index
 
         virtual ~LSMTreeIndex() override;
 
+        void SetMaxTableSize(size_t size)
+        { maxTableSize = size; }
+
     private:
         struct SparseTableHeader
         {
@@ -38,5 +41,6 @@ namespace db::index
 
         std::map<std::string, size_t> table;
         std::map<std::pair<std::string, std::string>, std::string> sparseTable;
+        size_t maxTableSize = MAX_SSTABLE_SIZE;
     };
 }

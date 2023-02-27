@@ -21,7 +21,7 @@ namespace db::index
         }
         table[key] = writer(pair);
 
-        if (table.size() > MAX_SSTABLE_SIZE)
+        if (table.size() > maxTableSize)
         {
             SaveTable();
         }

@@ -15,7 +15,8 @@ set(SRC
         src/Utils.cpp
         src/index/HashIndex.cpp
         src/index/SlowIndex.cpp
-        src/index/SsTableIndex.cpp include/Config.hpp)
+        src/index/SsTableIndex.cpp
+        src/index/LsmTreeIndex.cpp)
 
 add_executable(KeyMapped ${SRC} src/main.cpp)
 add_executable(KeyMappedTests ${SRC} tests/tests.cpp)

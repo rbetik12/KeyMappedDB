@@ -123,3 +123,22 @@ TEST_CASE("Check empty key in sstable db and slow reading")
     CHECK(db.Get("Key3") == "Value3");
     CHECK(db.Get("Kek") == "");
 }
+
+TEST_CASE("Check lsm-tree base")
+{
+    {
+        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+        db.Add("Key", "Value");
+        db.Add("Key1", "Value1");
+        db.Add("Key2", "Value2");
+        db.Add("Key3", "Value3");
+    }
+
+    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::LSM);
+
+    CHECK(db.Get("Key") == "Value");
+    CHECK(db.Get("Key1") == "Value1");
+    CHECK(db.Get("Key2") == "Value2");
+    CHECK(db.Get("Key3") == "Value3");
+    CHECK(db.Get("Kek") == "");
+}

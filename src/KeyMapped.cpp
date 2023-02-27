@@ -6,6 +6,7 @@
 #include "index/HashIndex.hpp"
 #include "index/SlowIndex.hpp"
 #include "index/SsTableIndex.hpp"
+#include "index/LsmTreeIndex.hpp"
 
 using namespace db;
 
@@ -25,6 +26,9 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
             break;
         case index::Type::SSTable:
             indexInstance = std::make_shared<index::SSTableIndex>(headerFilePath);
+            break;
+        case index::Type::LSM:
+            indexInstance = std::make_shared<index::LSMTreeIndex>(headerFilePath);
             break;
         default:
             assert(false);

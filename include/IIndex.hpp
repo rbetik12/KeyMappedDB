@@ -35,7 +35,13 @@ namespace db::index
     class IIndex
     {
     public:
-        IIndex(const std::string& dbName) { KM_INFO("Creating index for {} db", dbName); }
+        IIndex(const std::string& dbName)
+        {
+            if (name.empty())
+            {
+                name = dbName;
+            }
+        }
         virtual bool Add(const KeyValue& pair) = 0;
         virtual KeyValue Get(std::string_view key) = 0;
 

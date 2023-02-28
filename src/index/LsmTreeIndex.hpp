@@ -20,6 +20,8 @@ namespace db::index
         { maxTableSize = size; }
 
     private:
+        static const size_t MAX_PATH_LENGTH = 256;
+
         struct SparseTableHeader
         {
             size_t magicNumber;
@@ -30,7 +32,7 @@ namespace db::index
         {
             char firstKey[MAX_KEY_SIZE];
             char lastKey[MAX_KEY_SIZE];
-            char indexPath[MAX_KEY_SIZE];
+            char indexPath[MAX_PATH_LENGTH];
         };
 
         KeyValue Find(std::string_view key);
@@ -43,5 +45,6 @@ namespace db::index
         std::map<std::string, size_t> table;
         std::map<std::pair<std::string, std::string>, std::string> sparseTable;
         size_t maxTableSize = MAX_SSTABLE_SIZE;
+        const size_t indexKeySize = 19;
     };
 }

@@ -1,6 +1,8 @@
 #include "Utils.hpp"
 
 #include <cassert>
+#include <random>
+#include <sstream>
 
 namespace db::utils
 {
@@ -42,5 +44,25 @@ namespace db::utils
         }
 
         return bytesRead;
+    }
+
+    std::string GenerateRandomString(int length)
+    {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static constexpr char alphabet[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        static constexpr int alphabetSize = sizeof(alphabet) - 1;
+        static char distribution[alphabetSize];
+
+        // Initialize the distribution array with random characters
+        std::generate_n(distribution, alphabetSize, [&] { return alphabet[gen() % alphabetSize]; });
+
+        std::ostringstream randomString;
+        for (int i = 0; i < length; ++i)
+        {
+            randomString << distribution[i % alphabetSize];
+        }
+
+        return randomString.str();
     }
 }

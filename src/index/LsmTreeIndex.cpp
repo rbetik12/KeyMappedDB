@@ -64,7 +64,8 @@ namespace db::index
 
         for (const auto& [keyPair, path] : sparseTable)
         {
-            if (keyPair.second > key.data() && key.data() > keyPair.first)
+            const std::string keySbtr(key.substr(0, indexKeySize));
+            if (keyPair.second > keySbtr && keySbtr > keyPair.first)
             {
                 LoadTable(path);
                 const auto loadedIt = table.find(key.data());
@@ -72,7 +73,6 @@ namespace db::index
                 {
                     return reader(loadedIt->second);
                 }
-                assert(false);
             }
         }
 
@@ -86,6 +86,11 @@ namespace db::index
 
     void LSMTreeIndex::SaveTable()
     {
+        if (table.empty())
+        {
+            return;
+        }
+
         OffsetIndexHeader header{};
         header.keysAmount = table.size();
         header.magicNumber = MAGIC_NUMBER;
@@ -100,8 +105,8 @@ namespace db::index
             indexes.emplace_back(index);
         }
 
-        const std::string& firstKey = table.begin()->first;
-        const std::string& lastKey = table.rbegin()->first;
+        const std::string firstKey = table.begin()->first.substr(0, indexKeySize);
+        const std::string lastKey = table.rbegin()->first.substr(0, indexKeySize);
         const std::string indexName = name + "-" + firstKey + "-" + lastKey + "-lsm-tree.index";
         sparseTable[{ firstKey, lastKey }] = indexName;
 
@@ -150,7 +155,7 @@ namespace db::index
         {
             assert(key.first.size() < MAX_KEY_SIZE
             && key.second.size() < MAX_KEY_SIZE
-            && path.size() < MAX_KEY_SIZE);
+            && path.size() < MAX_PATH_LENGTH);
 
             SparseTableElement element{};
             memcpy(element.firstKey, key.first.data(), key.first.size());

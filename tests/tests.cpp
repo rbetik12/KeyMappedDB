@@ -9,6 +9,12 @@ constexpr const char* TEST_BIN_DIR = "bin";
 
 namespace
 {
+    struct KeyValue
+    {
+        std::string key;
+        std::string value;
+    };
+
     void CreateDb(db::index::Type index)
     {
         db::KeyMapped db(TEST_DB_PATH, true, false, index);
@@ -177,4 +183,71 @@ TEST_CASE("Check lsm-tree base with low table size dump value")
 
     LoadAndCheckLSMTreeDB();
     LoadAndCheckLSMTreeDB();
+}
+
+TEST_CASE("Check lsm-tree with 1000 key-value pairs")
+{
+    db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+
+    const size_t samplesAmount = 1000;
+    std::vector<KeyValue> kvs;
+    kvs.reserve(samplesAmount);
+
+    for (size_t i = 0; i < samplesAmount; i++)
+    {
+        KeyValue kv{};
+        kv.key = db::utils::GenerateRandomString(16);
+        kv.value = db::utils::GenerateRandomString(16);
+        kvs.emplace_back(kv);
+    }
+
+    for (const auto& [key, value]: kvs)
+    {
+        db.Add(key, value);
+    }
+
+    bool result = true;
+    for (const auto& [key, value] : kvs)
+    {
+        result &= db.Get(key) == value;
+    }
+    CHECK(result == true);
+}
+
+TEST_CASE("Check lsm-tree with low table size dump value and large keys")
+{
+    std::vector<KeyValue> kvs;
+    kvs.reserve(20);
+
+    for (size_t i = 0; i < 20; i++)
+    {
+        KeyValue kv{};
+        kv.key = db::utils::GenerateRandomString(db::MAX_KEY_SIZE - 1);
+        kv.value = db::utils::GenerateRandomString(db::MAX_KEY_SIZE - 1);
+        kvs.emplace_back(kv);
+    }
+
+    {
+        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+        auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
+        assert(index != nullptr);
+        index->SetMaxTableSize(2);
+        for (const auto& [key, value] : kvs)
+        {
+            db.Add(key, value);
+        }
+    }
+
+    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::LSM);
+    auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
+    assert(index != nullptr);
+    index->SetMaxTableSize(2);
+
+    bool result = true;
+    for (const auto& [key, value] : kvs)
+    {
+        result &= db.Get(key) == value;
+    }
+    CHECK(result == true);
+
 }

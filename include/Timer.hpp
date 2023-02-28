@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <utility>
 
 #define TIMER_START { Timer timer;
 #define TIMER_END const auto elapsed = timer.ElapsedMillis(); \
@@ -11,9 +12,14 @@ namespace db {
     class Timer
     {
     public:
-        Timer()
+        Timer(std::string debugStr) : str(std::move(debugStr))
         {
             Reset();
+        }
+
+        ~Timer()
+        {
+            KM_INFO("{}: {}ms", str, ElapsedMillis());
         }
 
         void Reset()
@@ -33,5 +39,6 @@ namespace db {
 
     private:
         std::chrono::time_point<std::chrono::high_resolution_clock> start;
+        std::string str;
     };
 }

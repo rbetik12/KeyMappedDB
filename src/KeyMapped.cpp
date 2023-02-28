@@ -145,7 +145,6 @@ std::string KeyMapped::Get(std::string_view key)
 
 std::pair<int64_t, KeyValue> KeyMapped::ReadUnIndexed(std::string_view key)
 {
-    Timer timer;
     KeyValue pair{};
     bool success = false;
     size_t offset = 0;
@@ -159,11 +158,6 @@ std::pair<int64_t, KeyValue> KeyMapped::ReadUnIndexed(std::string_view key)
             success = true;
             break;
         }
-    }
-
-    if (showDebugInfo)
-    {
-        KM_TRACE("{} took {}ms", __FUNCTION__, timer.ElapsedMillis());
     }
 
     if (success)

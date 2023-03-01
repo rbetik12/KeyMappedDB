@@ -14,12 +14,11 @@ namespace db::index
     bool LSMTreeIndex::Add(const KeyValue& pair)
     {
         const std::string key = pair.key;
-        KeyValue kv = Find(key);
-        if (kv.Valid())
+        if (Exists(key))
         {
             return false;
         }
-        table[key] = writer(pair);
+        pendingTable[key] = writer(pair);
 
         if (table.size() > maxTableSize)
         {
@@ -42,6 +41,7 @@ namespace db::index
 
     LSMTreeIndex::~LSMTreeIndex()
     {
+        FlushPending();
         SaveTable();
 
         //Merge indexes
@@ -56,10 +56,10 @@ namespace db::index
 
     KeyValue LSMTreeIndex::Find(std::string_view key)
     {
-        const auto it = table.find(key.data());
-        if (it != table.end())
+        const auto value = GetCachedValue(key);
+        if (value.has_value())
         {
-            return reader(it->second);
+            return reader(value.value());
         }
 
         for (const auto& [keyPair, path] : sparseTable)
@@ -86,6 +86,7 @@ namespace db::index
 
     void LSMTreeIndex::SaveTable()
     {
+        FlushPending();
         if (table.empty())
         {
             return;
@@ -96,7 +97,7 @@ namespace db::index
         header.magicNumber = MAGIC_NUMBER;
         std::vector<OffsetIndex> indexes;
         indexes.reserve(table.size());
-        for (const auto& [key, offset] : table)
+        for (auto& [key, offset] : table)
         {
             OffsetIndex index{};
             assert(key.size() < MAX_KEY_SIZE);
@@ -145,6 +146,11 @@ namespace db::index
 
     void LSMTreeIndex::SaveSparseTable()
     {
+        if (sparseTable.empty())
+        {
+            return;
+        }
+
         SparseTableHeader header{};
         header.magicNumber = MAGIC_NUMBER;
         header.size = sparseTable.size();
@@ -207,5 +213,61 @@ namespace db::index
             }
         }
         sparseTable.clear();
+    }
+
+    std::optional<size_t> LSMTreeIndex::GetCachedValue(std::string_view key)
+    {
+        auto pendingIt = pendingTable.find(key.data());
+        if (pendingIt != pendingTable.end())
+        {
+            auto& future = pendingIt->second;
+            assert(future.valid());
+            auto value = future.get();
+            table[key.data()] = value;
+            pendingTable.erase(key.data());
+            return value;
+        }
+        auto it = table.find(key.data());
+        if (it == table.end())
+        {
+            return std::nullopt;
+        }
+        return it->second;
+    }
+
+    bool LSMTreeIndex::Exists(std::string_view key)
+    {
+        auto pendingIt = pendingTable.find(key.data());
+        if (pendingIt != pendingTable.end())
+        {
+            return true;
+        }
+
+        auto it = table.find(key.data());
+        if (it != table.end())
+        {
+            return true;
+        }
+
+        const auto [offset, kv] = slowReader(key);
+        if (kv.Valid())
+        {
+            table[key.data()] = offset;
+            return true;
+        }
+        return false;
+    }
+
+    void LSMTreeIndex::FlushPending()
+    {
+        if (!pendingTable.empty())
+        {
+            for (auto it = pendingTable.begin(); it != pendingTable.end();)
+            {
+                assert(it->second.valid());
+                table[it->first] = it->second.get();
+                it = pendingTable.erase(it);
+            }
+        }
     }
 }

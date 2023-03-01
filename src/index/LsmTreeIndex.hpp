@@ -36,12 +36,17 @@ namespace db::index
         };
 
         KeyValue Find(std::string_view key);
+        bool Exists(std::string_view key);
         void SaveTable();
         void LoadTable(std::string_view tableName);
         void SaveSparseTable();
         void LoadSparseTable();
         void ClearSparseTable();
+        void FlushPending();
 
+        std::optional<size_t> GetCachedValue(std::string_view key);
+
+        std::unordered_map<std::string, std::future<size_t>> pendingTable;
         std::map<std::string, size_t> table;
         std::map<std::pair<std::string, std::string>, std::string> sparseTable;
         size_t maxTableSize = MAX_SSTABLE_SIZE;

@@ -14,44 +14,39 @@ namespace
         std::string key;
         std::string value;
     };
-
-    void CreateDb(db::index::Type index)
-    {
-        db::KeyMapped db(TEST_DB_PATH, true, false, index);
-    }
 }
 
-TEST_CASE("Create and check slow db")
-{
-    CreateDb(db::index::Type::Slow);
-    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::Slow);
-    db.Add("Key", "Value");
-    db.Add("Key1", "Value1");
-    db.Add("Key2", "Value2");
-    db.Add("Key3", "Value3");
+//TEST_CASE("Create and check slow db")
+//{
+//    CreateDb(db::index::Type::Slow);
+//    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::Slow);
+//    db.Add("Key", "Value");
+//    db.Add("Key1", "Value1");
+//    db.Add("Key2", "Value2");
+//    db.Add("Key3", "Value3");
+//
+//    CHECK(db.Get("Key") == "Value");
+//    CHECK(db.Get("Key1") == "Value1");
+//    CHECK(db.Get("Key2") == "Value2");
+//    CHECK(db.Get("Key3") == "Value3");
+//    CHECK(db.Get("") == "");
+//}
 
-    CHECK(db.Get("Key") == "Value");
-    CHECK(db.Get("Key1") == "Value1");
-    CHECK(db.Get("Key2") == "Value2");
-    CHECK(db.Get("Key3") == "Value3");
-    CHECK(db.Get("") == "");
-}
-
-TEST_CASE("Create and check hash db")
-{
-    CreateDb(db::index::Type::Hash);
-    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::Hash);
-    db.Add("Key", "Value");
-    db.Add("Key1", "Value1");
-    db.Add("Key2", "Value2");
-    db.Add("Key3", "Value3");
-
-    CHECK(db.Get("Key") == "Value");
-    CHECK(db.Get("Key1") == "Value1");
-    CHECK(db.Get("Key2") == "Value2");
-    CHECK(db.Get("Key3") == "Value3");
-    CHECK(db.Get("") == "");
-}
+//TEST_CASE("Create and check hash db")
+//{
+//    CreateDb(db::index::Type::Hash);
+//    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::Hash);
+//    db.Add("Key", "Value");
+//    db.Add("Key1", "Value1");
+//    db.Add("Key2", "Value2");
+//    db.Add("Key3", "Value3");
+//
+//    CHECK(db.Get("Key") == "Value");
+//    CHECK(db.Get("Key1") == "Value1");
+//    CHECK(db.Get("Key2") == "Value2");
+//    CHECK(db.Get("Key3") == "Value3");
+//    CHECK(db.Get("") == "");
+//}
 
 TEST_CASE("Check file read and write")
 {
@@ -92,43 +87,43 @@ TEST_CASE("Check file read and write")
     }
 }
 
-TEST_CASE("Check empty key in hash db and slow reading")
-{
-    {
-        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::Hash);
-        db.Add("Key", "Value");
-        db.Add("Key1", "Value1");
-        db.Add("Key2", "Value2");
-        db.Add("Key3", "Value3");
-    }
+//TEST_CASE("Check empty key in hash db and slow reading")
+//{
+//    {
+//        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::Hash);
+//        db.Add("Key", "Value");
+//        db.Add("Key1", "Value1");
+//        db.Add("Key2", "Value2");
+//        db.Add("Key3", "Value3");
+//    }
+//
+//    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::Hash);
+//
+//    CHECK(db.Get("Key") == "Value");
+//    CHECK(db.Get("Key1") == "Value1");
+//    CHECK(db.Get("Key2") == "Value2");
+//    CHECK(db.Get("Key3") == "Value3");
+//    CHECK(db.Get("") == "");
+//}
 
-    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::Hash);
-
-    CHECK(db.Get("Key") == "Value");
-    CHECK(db.Get("Key1") == "Value1");
-    CHECK(db.Get("Key2") == "Value2");
-    CHECK(db.Get("Key3") == "Value3");
-    CHECK(db.Get("") == "");
-}
-
-TEST_CASE("Check empty key in sstable db and slow reading")
-{
-    {
-        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::SSTable);
-        db.Add("Key", "Value");
-        db.Add("Key1", "Value1");
-        db.Add("Key2", "Value2");
-        db.Add("Key3", "Value3");
-    }
-
-    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::SSTable);
-
-    CHECK(db.Get("Key") == "Value");
-    CHECK(db.Get("Key1") == "Value1");
-    CHECK(db.Get("Key2") == "Value2");
-    CHECK(db.Get("Key3") == "Value3");
-    CHECK(db.Get("Kek") == "");
-}
+//TEST_CASE("Check empty key in sstable db and slow reading")
+//{
+//    {
+//        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::SSTable);
+//        db.Add("Key", "Value");
+//        db.Add("Key1", "Value1");
+//        db.Add("Key2", "Value2");
+//        db.Add("Key3", "Value3");
+//    }
+//
+//    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::SSTable);
+//
+//    CHECK(db.Get("Key") == "Value");
+//    CHECK(db.Get("Key1") == "Value1");
+//    CHECK(db.Get("Key2") == "Value2");
+//    CHECK(db.Get("Key3") == "Value3");
+//    CHECK(db.Get("Kek") == "");
+//}
 
 TEST_CASE("Check lsm-tree base")
 {

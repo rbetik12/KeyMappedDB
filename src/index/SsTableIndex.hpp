@@ -19,6 +19,6 @@ namespace db::index
     private:
         void LoadTable();
         void SaveTable();
-        std::map<std::string, size_t> table;
+        std::map<std::string, std::future<size_t>> table;
     };
 }

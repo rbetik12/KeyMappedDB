@@ -15,7 +15,7 @@ namespace db::index
         {
             return false;
         }
-        offsetMap[key] = writer(pair);
+        offsetMap[key] = std::move(writer(pair));
         return true;
     }
 
@@ -26,13 +26,15 @@ namespace db::index
         const auto it = offsetMap.find(keyStr);
         if (it != offsetMap.end())
         {
-            reader(it->second);
+            reader(it->second.get());
         }
 
         auto [offset, result] = slowReader(key);
         if (result.Valid())
         {
-            offsetMap[keyStr] = offset;
+            std::promise<size_t> promise;
+            promise.set_value(offset);
+            offsetMap[keyStr] = std::move(promise.get_future());
         }
         return result;
     }

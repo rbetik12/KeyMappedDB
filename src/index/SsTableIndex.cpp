@@ -18,7 +18,7 @@ namespace db::index
         {
             return false;
         }
-        table[key] = writer(pair);
+        table[key] = std::move(writer(pair));
         return true;
     }
 
@@ -29,13 +29,16 @@ namespace db::index
         const auto it = table.find(keyStr);
         if (it != table.end())
         {
-            return reader(it->second);
+            return reader(it->second.get());
         }
 
         auto [offset, result] = slowReader(key);
         if (result.Valid())
         {
-            table[keyStr] = offset;
+            std::promise<size_t> promise;
+            auto future = promise.get_future();
+            promise.set_value(offset);
+            table[keyStr] = std::move(future);
         }
         return result;
     }
@@ -66,7 +69,9 @@ namespace db::index
 
         for (const auto& index : indexes)
         {
-            table[index.key] = index.offset;
+            std::promise<size_t> promise;
+            promise.set_value(index.offset);
+            table[index.key] = std::move(promise.get_future());
         }
     }
 
@@ -78,12 +83,12 @@ namespace db::index
         std::vector<OffsetIndex> indexes;
         indexes.reserve(table.size());
 
-        for (const auto& [key, offset] : table)
+        for (auto& [key, offset] : table)
         {
             OffsetIndex index{};
             assert(key.size() < MAX_KEY_SIZE);
             memcpy(index.key, key.data(), key.size());
-            index.offset = offset;
+            index.offset = offset.get();
             indexes.emplace_back(index);
         }
 

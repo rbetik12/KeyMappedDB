@@ -37,7 +37,9 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
     indexInstance->SetWriter([&](const KeyValue& pair)
                              {
                                  assert(pair.Valid());
-                                 return Write(pair);
+                                 std::promise<size_t> promise;
+                                 promise.set_value(Write(pair));
+                                 return promise.get_future();
                              });
     indexInstance->SetReader([&](int64_t offset)
                              {
@@ -48,7 +50,7 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
                                      return ReadUnIndexed(key);
                                  });
     showDebugInfo = debug;
-    if (overwrite && fs::exists(dbPath))
+    if (overwrite && fs::exists(dbPath) && fs::exists(dbPath))
     {
         assert(fs::remove(dbPath));
         assert(fs::remove(headerPath));
@@ -86,17 +88,10 @@ bool KeyMapped::Add(std::string_view key, std::string_view value)
 {
     if (key.empty() || value.empty())
     {
-        KM_WARN("Attempt to write empty key \"{}\" or value \"{}\"", key.data(), value.data());
         return false;
     }
 
     if (key.size() >= MAX_KEY_SIZE && value.size() >= MAX_VALUE_SIZE)
-    {
-        KM_WARN("Attempt to write too large key \"{}\" or value \"{}\"", key.data(), value.data());
-        return false;
-    }
-
-    if (!Get(key).empty())
     {
         return false;
     }
@@ -127,7 +122,8 @@ size_t KeyMapped::Write(const KeyValue& pair)
     assert(pair.descriptor.keySize < MAX_KEY_SIZE && pair.descriptor.valueSize < MAX_VALUE_SIZE);
     header.size += 1;
 
-    return utils::Write(dbFile, reinterpret_cast<const char*>(&pair), sizeof(pair)) - sizeof(pair);
+    const auto offset = utils::Write(dbFile, reinterpret_cast<const char*>(&pair), sizeof(pair)) - sizeof(pair);
+    return offset;
 }
 
 KeyValue KeyMapped::Read(int64_t offset)

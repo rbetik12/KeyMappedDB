@@ -17,6 +17,6 @@ namespace db::index
         virtual ~HashIndex() override;
 
     private:
-        std::unordered_map<std::string, size_t> offsetMap;
+        std::unordered_map<std::string, std::future<size_t>> offsetMap;
     };
 }

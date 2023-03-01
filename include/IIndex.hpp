@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 #include <Config.hpp>
+#include <future>
 #include "Logger.hpp"
 
 namespace db
@@ -55,7 +56,7 @@ namespace db::index
 
         virtual ~IIndex() {}
 
-        void SetWriter(std::function<size_t(const KeyValue&)>&& aWriter)
+        void SetWriter(std::function<std::future<size_t>(const KeyValue&)>&& aWriter)
         { writer = std::move(aWriter); }
 
         void SetReader(std::function<KeyValue(int64_t)>&& aReader)
@@ -65,7 +66,7 @@ namespace db::index
         { slowReader = aReader; }
 
     protected:
-        std::function<size_t(const KeyValue&)> writer;
+        std::function<std::future<size_t>(const KeyValue&)> writer;
         std::function<KeyValue(int64_t)> reader;
         std::function<std::pair<int64_t, KeyValue>(std::string_view)> slowReader;
         std::string name;

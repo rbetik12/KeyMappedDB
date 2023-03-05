@@ -10,7 +10,7 @@
 
 using namespace db;
 
-KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::Type indexType) : dbPath(std::move(dbPath))
+KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, index::Type indexType) : dbPath(std::move(dbPath))
 {
     Log::Init();
     const std::string headerFilePath = dbPath.stem().generic_string();
@@ -37,9 +37,10 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
     indexInstance->SetWriter([&](const KeyValue& pair)
                              {
                                  assert(pair.Valid());
-                                 std::promise<size_t> promise;
-                                 promise.set_value(Write(pair));
-                                 return promise.get_future();
+                                 return pool.enqueue([=]()
+                                 {
+                                     return Write(pair);
+                                 });
                              });
     indexInstance->SetReader([&](int64_t offset)
                              {
@@ -49,7 +50,6 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
                                  {
                                      return ReadUnIndexed(key);
                                  });
-    showDebugInfo = debug;
     if (overwrite && fs::exists(dbPath) && fs::exists(dbPath))
     {
         assert(fs::remove(dbPath));
@@ -62,8 +62,6 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
     {
         validate = true;
     }
-
-
 
     dbFile = std::fstream(dbPath, std::ios::in | std::ios::app | std::ios::binary);
     assert(dbFile.is_open());
@@ -81,6 +79,7 @@ KeyMapped::KeyMapped(const fs::path& dbPath, bool overwrite, bool debug, index::
 
 KeyMapped::~KeyMapped()
 {
+    indexInstance->Flush();
     WriteHeader();
 }
 
@@ -118,6 +117,7 @@ void KeyMapped::ReadHeader()
 
 size_t KeyMapped::Write(const KeyValue& pair)
 {
+    std::lock_guard<std::mutex> lock(mutex);
     assert(pair.descriptor.valueSize != 0 && pair.descriptor.keySize != 0);
     assert(pair.descriptor.keySize < MAX_KEY_SIZE && pair.descriptor.valueSize < MAX_VALUE_SIZE);
     header.size += 1;
@@ -128,6 +128,7 @@ size_t KeyMapped::Write(const KeyValue& pair)
 
 KeyValue KeyMapped::Read(int64_t offset)
 {
+    std::lock_guard<std::mutex> lock(mutex);
     KeyValue kv{};
     utils::Read(dbFile, reinterpret_cast<char*>(&kv), sizeof(kv), offset);
     return kv;
@@ -146,7 +147,7 @@ std::pair<int64_t, KeyValue> KeyMapped::ReadUnIndexed(std::string_view key)
     size_t offset = 0;
     for (int i = 0; i < header.size; i++)
     {
-        utils::Read(dbFile, reinterpret_cast<char*>(&pair), sizeof(pair), offset);
+        pair = Read(offset);
         offset += sizeof(pair);
 
         if (std::string(key) == pair.key)

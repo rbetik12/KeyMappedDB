@@ -1,4 +1,5 @@
 #include "LsmTreeIndex.hpp"
+#include "Timer.hpp"
 #include <Utils.hpp>
 #include <KeyMapped.hpp>
 
@@ -18,8 +19,8 @@ namespace db::index
         {
             return false;
         }
-        pendingTable[key] = writer(pair);
 
+        pendingTable[key] = writer(pair);
         if (table.size() > maxTableSize)
         {
             SaveTable();
@@ -107,7 +108,7 @@ namespace db::index
         }
 
         const std::string firstKey = table.begin()->first.substr(0, indexKeySize);
-        const std::string lastKey = table.rbegin()->first.substr(0, indexKeySize);
+        const std::string lastKey = (--table.end())->first.substr(0, indexKeySize);
         const std::string indexName = name + "-" + firstKey + "-" + lastKey + "-lsm-tree.index";
         sparseTable[{ firstKey, lastKey }] = indexName;
 
@@ -116,7 +117,6 @@ namespace db::index
         assert(output.is_open());
         utils::Write(output, reinterpret_cast<const char*>(&header), sizeof(header));
         utils::Write(output, reinterpret_cast<const char*>(indexes.data()), indexes.size() * sizeof(OffsetIndex));
-        table.clear();
     }
 
     void LSMTreeIndex::LoadTable(std::string_view tableName)
@@ -249,11 +249,18 @@ namespace db::index
             return true;
         }
 
-        const auto [offset, kv] = slowReader(key);
-        if (kv.Valid())
+        for (const auto& [keyPair, path] : sparseTable)
         {
-            table[key.data()] = offset;
-            return true;
+            const std::string keySbtr(key.substr(0, indexKeySize));
+            if (keyPair.second > keySbtr && keySbtr > keyPair.first)
+            {
+                LoadTable(path);
+                const auto loadedIt = table.find(key.data());
+                if (loadedIt != table.end())
+                {
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -269,5 +276,11 @@ namespace db::index
                 it = pendingTable.erase(it);
             }
         }
+    }
+
+    void LSMTreeIndex::Flush()
+    {
+        IIndex::Flush();
+        FlushPending();
     }
 }

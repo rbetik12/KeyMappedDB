@@ -11,7 +11,7 @@ namespace
         std::string value;
     };
     constexpr const char* PERF_TEST_DB_PATH = "./perf-test-db.bin";
-    constexpr const size_t SAMPLES_AMOUNT = 1000;
+    constexpr const size_t SAMPLES_AMOUNT = 1000000;
 }
 
 int main()
@@ -27,7 +27,7 @@ int main()
         kvs.emplace_back(kv);
     }
 
-    db::KeyMapped db(PERF_TEST_DB_PATH, true, false, db::index::Type::LSM);
+    db::KeyMapped db(PERF_TEST_DB_PATH, true, db::index::Type::LSM);
 
     {
         db::Timer timer("Filling table");

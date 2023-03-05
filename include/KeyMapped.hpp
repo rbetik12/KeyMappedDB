@@ -6,6 +6,8 @@
 #include <map>
 #include <IIndex.hpp>
 #include <Config.hpp>
+#include <thread_pool/dynamic_pool.hpp>
+#include <thread_pool/static_pool.hpp>
 
 namespace db
 {
@@ -33,7 +35,7 @@ namespace db
     class KeyMapped
     {
     public:
-        KeyMapped(const fs::path& dbPath, bool overwrite = false, bool debug = false, index::Type indexType = index::Type::Hash);
+        KeyMapped(const fs::path& dbPath, bool overwrite = false, index::Type indexType = index::Type::Hash);
         ~KeyMapped();
 
         bool Add(std::string_view key, std::string_view value);
@@ -51,9 +53,10 @@ namespace db
         std::pair<int64_t, KeyValue> ReadUnIndexed(std::string_view key);
         std::fstream dbFile;
         Header header;
-        bool showDebugInfo = false;
         std::shared_ptr<index::IIndex> indexInstance;
         fs::path dbPath;
         fs::path headerPath;
+        std::mutex mutex;
+        thread_pool::static_pool pool;
     };
 }

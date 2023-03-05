@@ -2,6 +2,7 @@
 
 #include "IIndex.hpp"
 #include <map>
+#include <optional>
 
 namespace db::index
 {
@@ -12,6 +13,7 @@ namespace db::index
         virtual bool Add(const KeyValue& pair) override;
         virtual KeyValue Get(std::string_view key) override;
 
+        virtual void Flush() override;
         virtual void Clear() override;
 
         virtual ~LSMTreeIndex() override;
@@ -48,7 +50,16 @@ namespace db::index
 
         std::unordered_map<std::string, std::future<size_t>> pendingTable;
         std::map<std::string, size_t> table;
-        std::map<std::pair<std::string, std::string>, std::string> sparseTable;
+
+        struct PairHash {
+            std::size_t operator()(const std::pair<std::string, std::string>& pair) const {
+                const std::size_t h1 = std::hash<std::string>{}(pair.first);
+                const std::size_t h2 = std::hash<std::string>{}(pair.second);
+                return h1 ^ (h2 << 1);
+            }
+        };
+
+        std::unordered_map<std::pair<std::string, std::string>, std::string, PairHash> sparseTable;
         size_t maxTableSize = MAX_SSTABLE_SIZE;
         const size_t indexKeySize = 19;
     };

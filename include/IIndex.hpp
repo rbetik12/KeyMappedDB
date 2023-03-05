@@ -54,6 +54,8 @@ namespace db::index
             }
         }
 
+        virtual void Flush() {}
+
         virtual ~IIndex() {}
 
         void SetWriter(std::function<std::future<size_t>(const KeyValue&)>&& aWriter)

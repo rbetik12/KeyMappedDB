@@ -128,14 +128,14 @@ TEST_CASE("Check file read and write")
 TEST_CASE("Check lsm-tree base")
 {
     {
-        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+        db::KeyMapped db(TEST_DB_PATH, true, db::index::Type::LSM);
         db.Add("Key", "Value");
         db.Add("Key1", "Value1");
         db.Add("Key2", "Value2");
         db.Add("Key3", "Value3");
     }
 
-    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::LSM);
+    db::KeyMapped db(TEST_DB_PATH, false,  db::index::Type::LSM);
 
     CHECK(db.Get("Key") == "Value");
     CHECK(db.Get("Key1") == "Value1");
@@ -150,7 +150,7 @@ namespace
 {
     void LoadAndCheckLSMTreeDB()
     {
-        db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::LSM);
+        db::KeyMapped db(TEST_DB_PATH, false, db::index::Type::LSM);
         auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
         assert(index != nullptr);
         index->SetMaxTableSize(2);
@@ -166,7 +166,7 @@ namespace
 TEST_CASE("Check lsm-tree base with low table size dump value")
 {
     {
-        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+        db::KeyMapped db(TEST_DB_PATH, true, db::index::Type::LSM);
         auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
         assert(index != nullptr);
         index->SetMaxTableSize(2);
@@ -182,7 +182,7 @@ TEST_CASE("Check lsm-tree base with low table size dump value")
 
 TEST_CASE("Check lsm-tree with 1000 key-value pairs")
 {
-    db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+    db::KeyMapped db(TEST_DB_PATH, true, db::index::Type::LSM);
 
     const size_t samplesAmount = 1000;
     std::vector<KeyValue> kvs;
@@ -223,7 +223,7 @@ TEST_CASE("Check lsm-tree with low table size dump value and large keys")
     }
 
     {
-        db::KeyMapped db(TEST_DB_PATH, true, false, db::index::Type::LSM);
+        db::KeyMapped db(TEST_DB_PATH, true, db::index::Type::LSM);
         auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
         assert(index != nullptr);
         index->SetMaxTableSize(2);
@@ -233,7 +233,7 @@ TEST_CASE("Check lsm-tree with low table size dump value and large keys")
         }
     }
 
-    db::KeyMapped db(TEST_DB_PATH, false, false, db::index::Type::LSM);
+    db::KeyMapped db(TEST_DB_PATH, false, db::index::Type::LSM);
     auto index = std::dynamic_pointer_cast<db::index::LSMTreeIndex>(db.Index());
     assert(index != nullptr);
     index->SetMaxTableSize(2);
@@ -244,5 +244,4 @@ TEST_CASE("Check lsm-tree with low table size dump value and large keys")
         result &= db.Get(key) == value;
     }
     CHECK(result == true);
-
 }

@@ -10,5 +10,5 @@ namespace db
     constexpr const size_t MAGIC_NUMBER = 0x1488;
     constexpr const size_t MAX_KEY_SIZE = BLOCK_SIZE;
     constexpr const size_t MAX_VALUE_SIZE = BLOCK_SIZE;
-    constexpr const size_t MAX_SSTABLE_SIZE = 4096;
+    const size_t MAX_SSTABLE_SIZE = static_cast<size_t>(std::powl(2, 15));
 }
